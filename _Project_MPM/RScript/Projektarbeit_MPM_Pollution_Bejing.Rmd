@@ -1,0 +1,2064 @@
+---
+title: "Projektarbeit_MPM"
+author: "Remo Oehninger, Gianni Pinelli, Tushanth, Stefan"
+date: "2 5 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+df <-  readRDS('../data/Pollution_Bejing', refhook = NULL)
+str(df)
+```
+
+```{r}
+plot(df$pm2.5,
+     pch = "*")
+```
+
+```{r}
+boxplot(pm2.5 ~ cbwd, data = df)
+```
+
+
+```{r}
+#install.packages('ggplot2')
+library(ggplot2)
+```
+
+# Linear Model (LM)
+
+## Lab 1: Continous variable
+
+In the frist chapter we look at the continous variables and will create a frist model. We will plot all continous avraiables against the resresponse variable pollution.
+
+```{r}
+lm.start <-  lm(pm2.5~. , data = df)
+summary(lm.start)
+```
+
+
+### 1.1 Testing the effect of the continouse variable
+
+#### 1.1.1 Analysis pollution against dew point
+
+```{r}
+# Plot the respons variable pm2.5 against the predictor DEWP with ggplot and the smoother method "lm".
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= DEWP)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and DEWP. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ DEWP, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topleft",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against DEWP. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= DEWP)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+```
+
+Plot 1: There is a weak positiv slope when we plotting the pollution against the dew piont. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3: All four plot showing a weak positiv linear regression.
+
+
+```{r}
+# Simple regression model
+lm.pollution.1 <- lm(pm2.5 ~ DEWP, data = df)
+summary(lm.pollution.1)
+
+#coefficiant
+coef(lm.pollution.1)
+```
+
+Fitting a a imple regression model pm2.5 ~ DEWP: It is evident from the output that the intercept is at 4.096 and the slop is 0.023. Also the p-value shows that there is a strong effect on the response variable.
+
+```{r}
+# Fitted regression model 
+lm.pollution.111 <- lm(pm2.5 ~ DEWP + cbwd, data = df)
+summary(lm.pollution.111)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable.
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.1111 <- lm(pm2.5 ~ DEWP * cbwd, data = df)
+summary(lm.pollution.1111)
+```
+
+If we inluding the iteraction between these two predictors, we see that all predictors have a shighly significant effect on the response variable. Also the Adjusted R-square is better with the interaction between the two predictors. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.1)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ DEWP, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ DEWP,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.1, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.1)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ DEWP,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.1)
+##
+points(pm2.5 ~ DEWP, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"DEWP"], x1 = df[id,"DEWP"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+
+
+#### 1.1.2 Analysis pollution against temperature
+
+In the second part of the this chapter we consider the effect from the temperatur on the pollution.
+
+```{r}
+# Plot the respons variable pm2.5 against the predictor TEMP with ggplot and the smoother method "lm".
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= TEMP)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and TEMP. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ TEMP, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topleft",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against TEMP. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= TEMP)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+```
+
+Plot 1: There is a really weak positiv slope when we plotting the pollution against the temperature. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3: Thats interessting! In Plot 1 we see a positiv linear regression but in plot 3 when we compare the pollution with the wind direction, all regression lines looks negativ.
+
+```{r}
+# Simple regression model
+lm.pollution.2 <- lm(pm2.5 ~ TEMP, data = df)
+summary(lm.pollution.2)
+```
+
+Fitting a a imple regression model pm2.5 ~ TEMP: It is evident from the output that the intercept is at 4.116 and the slop is 0.0016. Also the p-value shows that there is a strong effect on the response variable.
+
+```{r}
+# Fitted regression model 
+lm.pollution.222 <- lm(pm2.5 ~ TEMP + cbwd, data = df)
+summary(lm.pollution.222)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable whithut the wind direction cbwdSE.
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.2222 <- lm(pm2.5 ~ TEMP * cbwd, data = df)
+summary(lm.pollution.2222)
+```
+
+If we inluding the iteraction between these two predictors, we see that all predictors have a shighly significant effect on the response variable. Also the Adjusted R-square is better with the interaction between the two predictors. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.2)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ TEMP, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ TEMP,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.2, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.2)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ TEMP,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.2)
+##
+points(pm2.5 ~ TEMP, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"TEMP"], x1 = df[id,"TEMP"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+
+#### 1.1.3 Analysis pollution against air pressure 
+
+```{r}
+# Plot the respons variable pm2.5 against the predictor PRES with ggplot and the smoother method "lm".
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= PRES)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and PRES. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ PRES, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topleft",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against PRES. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= PRES)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+ 
+```
+
+Plot 1: There is a weak negativ slope when we plotting the pollution against the air pressure. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3:  Response variable against the predictors cv and NW shows a positiv regression line. Ne a negativ and SE looks like there is no linear regression.
+
+```{r}
+# Simple regression model
+lm.pollution.3 <- lm(pm2.5 ~ PRES, data = df)
+summary(lm.pollution.3)
+```
+
+Fitting a simple regression model pm2.5 ~ PRES: It is evident from the output that the intercept is at 20.415 and the slop is -0.016. Also the p-value shows that there is a strong effect on the response variable.
+
+```{r}
+# Fitted regression model 
+lm.pollution.333 <- lm(pm2.5 ~ PRES + cbwd, data = df)
+summary(lm.pollution.333)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable. 
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.3333 <- lm(pm2.5 ~ PRES * cbwd, data = df)
+summary(lm.pollution.3333)
+```
+
+With the interaction of the wind direction the model is getting better if we look at the Adjusted R-Square. All predictors have an effect on the response variable. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.3)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ PRES, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ PRES,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.3, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.3)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ PRES,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.3)
+##
+points(pm2.5 ~ PRES, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"PRES"], x1 = df[id,"PRES"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+
+#### 1.1.4 Analysis pollution against wind speed
+
+```{r}
+# Plot the respons variable pm2.5 against the predictor Iws with ggplot and the smoother method "lm".
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Iws)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and Iws. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ Iws, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topright",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against PRES. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Iws)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+```
+
+Plot 1: There is a weak negativ slope when we plotting the pollution against the air pressure. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3:  Response variable against the predictors cv and NW shows a positiv regression line. Ne a negativ and SE looks like there is no linear regression.
+
+```{r}
+lm.pollution.4 <- lm(pm2.5 ~ Iws, data = df)
+summary(lm.pollution.4)
+```
+
+Fitting a simple regression model pm2.5 ~ Iws: It is evident from the output that the intercept is at 20.415 and the slop is -0.016. Also the p-value shows that there is a strong effect on the response variable.
+
+```{r}
+# Fitted regression model 
+lm.pollution.444 <- lm(pm2.5 ~ Iws + cbwd, data = df)
+summary(lm.pollution.444)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable. 
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.4444 <- lm(pm2.5 ~ Iws * cbwd, data = df)
+summary(lm.pollution.4444)
+```
+
+With the interaction of the wind direction the model is getting better if we look at the Adjusted R-Square. All predictors have an effect on the response variable. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.4)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ Iws, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ Iws,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.4, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.4)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ Iws,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.4)
+##
+points(pm2.5 ~ Iws, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"Iws"], x1 = df[id,"Iws"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+#### 1.1.5 Analysis pollution against hours of snow
+
+```{r}
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Is)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and Is. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ Is, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topright",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against Is. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Is)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+```
+
+Plot 1: There is a weak negativ slope when we plotting the pollution against the air pressure. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3:  Response variable against the predictors cv and NW shows a positiv regression line. Ne a negativ and SE looks like there is no linear regression.
+
+```{r}
+lm.pollution.5 <- lm(pm2.5 ~ Is, data = df)
+summary(lm.pollution.5)
+```
+
+Fitting a simple regression model pm2.5 ~ Is: It is evident from the output that the intercept is at 20.415 and the slop is -0.016. Also the p-value shows that there is a strong effect on the response variable.
+
+```{r}
+# Fitted regression model 
+lm.pollution.555 <- lm(pm2.5 ~ Is + cbwd, data = df)
+summary(lm.pollution.555)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable. 
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.5555 <- lm(pm2.5 ~ Is * cbwd, data = df)
+summary(lm.pollution.5555)
+```
+
+With the interaction of the wind direction the model is getting a little bit better, if we look at the Adjusted R-Square. Not all predictors have an effect on the response variable. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.5)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ Is, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ Is,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.5, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.5)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ Is,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.5)
+##
+points(pm2.5 ~ Is, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"Is"], x1 = df[id,"Is"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+
+#### 1.1.6 Analysis pollution against hours of rain
+
+```{r}
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Ir)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# Plot with pm2.5 and Ir. Additionally we include the categorical variable wind direction cbwd. 
+plot(pm2.5 ~ Ir, data = df,
+     col = cbwd,
+     pch = 19)
+legend("topright",
+       pch = 19,
+       legend = c("cv", "NE", "NW", "SE"),
+       col = c("black", "green", "blue", "red"))
+
+# Plot with pm2.5 against Ir. Split the plot with each wind directions.
+ggplot(data = df,
+       mapping = aes (y = pm2.5,
+                      x= Ir)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(df$cbwd)
+```
+
+Plot 1: There is a weak negativ slope when we plotting the pollution against the air pressure. 
+
+Plot 2: The plot shows not many insights because the colors are overlapping.
+
+Plot 3:  Response variable against the predictors cv and NW shows a positiv regression line. Ne a negativ and SE looks like there is no linear regression.
+
+```{r}
+lm.pollution.6 <- lm(pm2.5 ~ Ir, data = df)
+summary(lm.pollution.6)
+```
+
+```{r}
+# Fitted regression model 
+lm.pollution.666 <- lm(pm2.5 ~ Ir + cbwd, data = df)
+summary(lm.pollution.666)
+```
+
+If we including the wind direction, we see that there is also a strong effect on the response variable. 
+
+```{r}
+# Fitted regression model inluding interaction of the response variable
+lm.pollution.6666 <- lm(pm2.5 ~ Ir * cbwd, data = df)
+summary(lm.pollution.6666)
+```
+
+With the interaction of the wind direction the model is getting a little bit better, if we look at the Adjusted R-Square. Not all predictors have an effect on the response variable. 
+
+```{r}
+# Fitted values
+fitted.poll <- fitted(lm.pollution.6)
+
+# Structur of fitted values
+str(fitted.poll)
+
+# Plot
+plot(pm2.5 ~ Ir, data = df,
+     col = "darkgrey")
+points(fitted.poll ~ Ir,
+       data = df,
+       col = "blue",
+       pch = 19)
+abline(lm.pollution.6, col = "black")
+
+```
+
+```{r}
+#Residuals
+resid.poll.1 <-  resid(lm.pollution.6)
+##
+length(resid.poll.1)
+##
+head(resid.poll.1)
+##
+set.seed(20) ## for reproducability
+id <- sample(x = 1:length(df), size = 5)
+resid.poll.1[id]
+
+## Plot
+plot(pm2.5 ~ Ir,
+     data = df,
+     col = " lightgrey")
+##
+abline(lm.pollution.6)
+##
+points(pm2.5 ~ Ir, data = df[id,], col = "red")
+##
+segments(x0 = df[id,"Ir"], x1 = df[id,"Ir"],
+         y0 = fitted.poll[id], y1 = df[id,"pm2.5"],
+         col = "blue")
+```
+
+
+```{r}
+# Compare the fitted LM with a simple model
+lm.pollution.0 <-  lm(pm2.5 ~ 1, data = df)
+coef(lm.pollution.0)
+
+# DEWP
+anova(lm.pollution.0, lm.pollution.1111)
+# TEMP
+anova(lm.pollution.0, lm.pollution.2222)
+# PRES
+anova(lm.pollution.0, lm.pollution.3333)
+# Iws
+anova(lm.pollution.0, lm.pollution.4444)
+# Is
+anova(lm.pollution.0, lm.pollution.555)
+# Ir
+anova(lm.pollution.0, lm.pollution.6666)
+```
+
+
+---
+
+## Lab 2: Treegrowth Lab (Graphs)
+
+### 2.1 Testing the effect of the categorical variable
+
+In the following chapter will analyse the categorical variable from the dataset Pollution in Beijing. 
+
+```{r}
+boxplot(pm2.5 ~ cbwd, data = df)
+```
+
+At first we plotted a boxplot to get a shot of the data.
+
+```{r}
+lm.pollution.20 <- lm(pm2.5 ~ cbwd, data = df)
+summary(lm.pollution.20)
+```
+
+All wind directions have an effect of the response variable.
+
+
+**Double check the intercepts**
+
+```{r}
+# computing the mean of each wind direction
+aggregate(pm2.5 ~ cbwd, data = df, mean)
+
+# cv
+coef(lm.pollution.20)[1]
+# NE
+coef(lm.pollution.20)[1] + coef(lm.pollution.20)[2]
+# NW
+coef(lm.pollution.20)[1] + coef(lm.pollution.20)[3]
+# SE
+coef(lm.pollution.20)[1] + coef(lm.pollution.20)[4]
+
+
+```
+
+Excellent. The mean values match perfectly with the results of the linear model.
+
+```{r}
+# Compare the model with a simple model
+anova(lm.pollution.0, lm.pollution.20)
+```
+
+
+
+
+### 2.2 Post-hoc contrast
+
+In this supchapter we want test, if one wind direction has more or less impact then an other because all wind directions are significant. To test these hypothesis we are using the Post-hoc contrast.
+
+We tested all possible pairs of wind directions with the "Tukey Honst Significant Difference Test" - methode.
+
+```{r}
+#install.packages("multcomp")
+library(multcomp)
+
+ph.test.THSD.1 <- glht(model = lm.pollution.20, 
+                  linfct = mcp(cbwd = "Tukey"))
+summary(ph.test.THSD.1)
+```
+
+The output shows, that all tests between the wind directions are highly significant. For a better understanding, we visualise the results in the following plot.
+
+```{r}
+par("mar")
+
+par(mar = c(5.1, 4.1, 2.1, 2.1))
+
+plot(ph.test.THSD.1)
+```
+
+
+### 2.3 Testing several variables
+
+```{r}
+lm.pollution.30 <- update(lm.pollution.20,
+                          . ~ . + month, data = df)
+drop1(lm.pollution.30, test = "F")
+```
+
+Testing the two new variables with the function drop1().
+
+```{r}
+lm.pollution.31 <- update(lm.pollution.30,
+                          . ~ . + year, data = df)
+drop1(lm.pollution.31, test = "F")
+```
+
+```{r}
+lm.pollution.32 <- update(lm.pollution.31,
+                          . ~ . + hour, data = df)
+drop1(lm.pollution.32, test = "F")
+```
+
+
+
+
+
+#### 2.3.1 Testing all predictors in a model
+
+```{r}
+anova(lm.pollution.0, lm.pollution.32)
+```
+
+
+```{r}
+tail(capture.output(summary(lm.pollution.32)))
+```
+
+
+
+
+########################################################
+########################################################
+
+
+## Lab 3: Treegrowth Lab (Graphs)
+
+### 3.1 Graphical analysis
+
+For a better understanding of the data structure we did a graphical analysis of the data. The graphicl analyis helps also to find further mistakes in the data and called also often Exploratory.
+We plotted the response variable against all predictor like in the chapter before. For all predictors we will using the add-on package {ggplot} and plotting two different type of plot. One plot will show a scatter plot with a regression line and in the other we will using a smoomther to consider, if the regression has maybe a non-linear effect.
+
+#### 3.1.1 Effect of the dew piont
+
+The first predictor that we inspected was the dew piont. We plot the pollution against the dew piont and add a regression line to the plot.
+
+```{r}
+library(ggplot2)
+
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = DEWP)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = DEWP)) +
+  geom_point() +
+  geom_smooth()
+```
+
+Plot 2: The plot with the smoother shows, that the effect is clearly non-linear.
+
+
+#### 3.1.2 Effect of the temperature
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = TEMP)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = TEMP)) +
+  geom_point() +
+  geom_smooth()
+```
+
+The effect here is also non-linear.
+
+
+#### 3.1.3 Effect of the pressure
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = PRES)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = PRES)) +
+  geom_point() +
+  geom_smooth()
+```
+
+The effect here is also non-linear. Maybe there is a quadratic effect.
+
+
+#### 3.1.4 Effect of the wind speed
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Iws)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Iws)) +
+  geom_point() +
+  geom_smooth()
+```
+
+The effect here is also non-linear.
+
+
+#### 3.1.5 Effect of hours of snow
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Is)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Is)) +
+  geom_point() +
+  geom_smooth()
+```
+
+The effect here is also non-linear.
+
+
+#### 3.1.6 Effect of hours of rain
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Ir)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Plot with smoother
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = Ir)) +
+  geom_point() +
+  geom_smooth()
+```
+
+The effect here is also non-linear.
+
+
+#### 3.1.6 Further "case-specific" plots
+
+**Futher plots pm2.5 ~ DEWP**
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = DEWP)) +
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  facet_wrap(.~cbwd)
+
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = DEWP)) +
+  geom_point() + 
+  geom_smooth(se = FALSE) +
+  facet_wrap(.~cbwd)
+```
+
+
+**Futher plots pm2.5 ~ TEMP**
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = TEMP)) +
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  facet_wrap(.~cbwd)
+
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = TEMP)) +
+  geom_point() + 
+  geom_smooth(se = FALSE) +
+  facet_wrap(.~cbwd)
+```
+
+
+**Futher plots pm2.5 ~ PRES**
+
+```{r}
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = PRES)) +
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  facet_wrap(.~cbwd)
+
+ggplot(data = df,
+       mapping = aes(y = pm2.5,
+                     x = PRES)) +
+  geom_point() + 
+  geom_smooth(se = FALSE) +
+  facet_wrap(.~cbwd)
+```
+
+
+### 3.2 Modelling
+
+**Fitting the starting model**
+
+```{r}
+lm.pollution.40 <- lm(pm2.5 ~ cbwd + DEWP + TEMP +
+                            PRES + Iws + Is + Ir +
+                            cbwd:DEWP +
+                            cbwd:TEMP +
+                            cbwd:PRES +
+                            cbwd:Iws +
+                            cbwd:Ir,
+                          data = df)
+```
+
+**Model "developement**
+
+```{r}
+drop1(lm.pollution.40, test = "F")
+```
+
+All terms in the model are highly significant.
+
+**Final model after chapter 3**
+
+```{r}
+formula(lm.pollution.40)
+```
+
+
+########################################################
+########################################################
+
+
+## Lab 4: Non-linearity lab (NLM)
+
+### 4.1 Quadratic and polynomial effects
+
+We saw in the previous chapter that the temperature has maybe a qudratic effect
+
+```{r}
+# Creat linear model
+lm.p.1 <- lm(pm2.5 ~ DEWP + TEMP + PRES + Iws + Is + Ir + hour, data = df)
+#Creat model with quadratic function I()
+lm.p.2 <- update(lm.p.1, . ~ . + I(TEMP^2))
+# Compare
+anova(lm.p.1,lm.p.2)
+```
+
+We see that there is a quadratic effect. 
+
+
+### 4.2 GAM
+
+We saw also in chapter 3 that all terms could have a non-linear effect to the model. We consider the non-linear effect with the General Additive Model and try to find out which polynomial degree is good for each term.
+
+```{r}
+library(mgcv)
+
+# General Additiv Model
+gam.1 <- gam(pm2.5 ~ cbwd + s(DEWP) + s(TEMP) + s(PRES) + s(Iws) + s(Is) + s(Ir), data = df)
+summary(gam.1)
+```
+
+We see that all term have a polynomial effect of the model. Just Ir has a quadratic effect. 
+
+
+########################################################
+########################################################
+
+
+## Lab 5: Residual Analysis
+
+### 5.1 Normality of the residuals
+
+```{r}
+qqnorm(resid(lm.pollution.40))
+qqline(resid(lm.pollution.40))
+```
+
+```{r}
+ggplot(mapping = aes(y = resid(lm.pollution.40),
+                     x = fitted(lm.pollution.40))) + 
+  geom_abline(intercept = 0, slope = 0) +
+  geom_point() +
+  geom_smooth()
+```
+
+The smoother is not on zero. That means the mdoel has to be clearly non-linear. 
+
+### 5.2 Homoscedasticity
+
+```{r}
+ggplot(mapping = aes(y = abs(resid(lm.pollution.40)),
+                     x = fitted(lm.pollution.40))) + 
+  geom_abline(intercept = 0, slope = 0) +
+  geom_point() +
+  geom_smooth()
+```
+
+The variance looks at the beginning not really constant but it is getting better.
+
+
+### 5.3 Influential observations
+
+```{r}
+# Cooks distance
+plot(lm.pollution.40)
+```
+
+The assumption of the normal errors with constant variance does not seem to be perfectly filfilled. Indeed, on plot number two the seem to be consider deviation from the expected line. The variance of the residuals in plot number two looks pretty good but in plot number four their are a couple of observation which are bigger than 0.5 and should be consider. So the linear model are not perfectly fullfilled.
+
+########################################################
+########################################################
+
+
+## Lab 6: Bootstrap
+
+```{r}
+formula(lm.pollution.40)
+```
+
+```{r}
+## ----summaryLm1-------------------------------------------------
+summary(lm.pollution.40)
+```
+
+```{r}
+## ----residualAnalysisLM-----------------------------------------
+# par(mfrow = c(2,2))
+plot(lm.pollution.40)
+```
+
+```{r}
+## ----installPlgraphics, eval=FALSE------------------------------
+## Install the package
+# install.packages("plgraphics",
+#                  repos = "http://R-forge.R-project.org")
+# 
+# 
+# 
+# ## ----QQplotForPlgraphics----------------------------------------
+# library(plgraphics)
+# plregr(lm.pollution.40, 
+#        plotselect = c(default = 0,
+#                       qq = 1),
+#        xvar = FALSE)
+```
+
+```{r}
+
+## ----simSample--------------------------------------------------
+set.seed(12)
+x.sample <- rnorm(n = 10, mean = 50, sd = 10)
+sort(x.sample)
+##
+mean(x.sample)
+```
+
+```{r}
+## ----getOneBootstrapSample--------------------------------------
+id <- sample(1:10, replace = TRUE)
+sort(id)
+x.sample[id]
+##
+mean(x.sample[id])
+```
+
+```{r}
+## ----get100Means------------------------------------------------
+B <- 10^3
+t.mean <- c()
+```
+
+```{r}
+##
+for(i in 1:B){
+  t.id <- sample(1:10, replace = TRUE)
+  t.x.sample <- x.sample[t.id]
+  t.mean[i] <- mean(t.x.sample)
+}
+##
+length(t.mean)
+hist(t.mean, breaks = 50)
+abline(v = mean(x.sample), col = "red")
+```
+
+```{r}
+## ----CIOriginalMeanValus----------------------------------------
+sorted.means <- sort(t.mean)
+quantile(sorted.means, probs = c(0.025, 0.975))
+```
+
+```{r}
+## ----CILm-------------------------------------------------------
+lm.mean <- lm(x.sample ~ 1)
+lm.mean
+##
+confint(lm.mean)
+```
+
+```{r}
+## ----CiForDiverstiyBoot-----------------------------------------
+library(boot)
+f.lm.coefs.div <- function(data, ind){
+  coef(lm(pm2.5 ~ cbwd + DEWP + TEMP + PRES + Iws + Is + Ir +
+                            cbwd:DEWP +
+                            cbwd:TEMP +
+                            cbwd:PRES +
+                            cbwd:Iws +
+                            cbwd:Ir,
+          data = data[ind, ]))["TEMP"]}
+##
+boot.lm.poll.2 <- boot(data = df, 
+                      statistic = f.lm.coefs.div,
+                      R = B)
+#str(boot.lm.trees)
+```
+
+```{r}
+## ----CiBootDiv--------------------------------------------------
+## 1) the original regression coefficient
+coef(lm.pollution.40)["TEMP"]
+##
+## 2) the boostrap-based CI
+boot.ci(boot.lm.poll.2, type = "basic")
+##
+## 3) the usual "parametric" CI that is based on the normality assumption
+confint(lm.pollution.40, parm = "TEMP")
+```
+
+
+########################################################
+########################################################
+
+
+## Lab 7: GLM Generalized Linear Model
+
+```{r}
+## ----glmpoisson-----------------------------------------
+glm.df <- glm(PRES ~ cbwd, 
+                   family = "poisson", ## we specify the distribution!
+                   data = df)
+## ----summaryPoisson-----------------------------------------------
+summary(glm.df)
+```
+
+```{r}
+## ----glmpoisson-----------------------------------------
+glm.df <- glm(hour ~ cbwd, 
+                   family = "poisson", ## we specify the distribution!
+                   data = df)
+## ----summaryPoisson-----------------------------------------------
+summary(glm.df)
+```
+
+```{r}
+## ----simPoissonFromGLM--------------------------------------------
+set.seed(2)
+sim.data.df.Poisson <- simulate(glm.df)
+##
+NROW(sim.data.df.Poisson)
+head(sim.data.df.Poisson)
+tail(sim.data.df.Poisson)
+##
+ggplot(mapping = aes(y = sim.data.df.Poisson$sim_1,
+                     x = df$hour)) +
+  geom_boxplot() +
+  # scale_y_continuous(breaks = c(0:5,1:3*10)) +
+  geom_hline(yintercept = 0) +
+  ylab("hour") +
+  xlab("cbwd")
+```
+``` {r}
+## ----fittingGLm--------------------------------------------
+glm.df_1 <- glm(cbind(day, hour) ~ cbwd,  
+                   family = "binomial",
+                   data = df)
+
+
+## ----summaryGLM--------------------------------------------
+summary(glm.df_1)
+```
+
+```{r}
+
+table(df$cbwd)
+```
+```{r}
+## ----multinom, message=FALSE--------------------------------------
+library(nnet)
+multinom.df <- multinom(hour ~ cbwd +
+TEMP, trace = FALSE, data = df)
+##
+
+summary(multinom.df)
+```
+```{r}
+## ----plotdf-----------------------------------------------------
+library(ggplot2)
+ggplot(data = df,
+       mapping = aes(y = PRES,
+                     x = pm2.5)) + 
+  geom_point()
+
+## ----dfBinomGraph, message=FALSE, echo=FALSE--------------------
+ggplot(data = df,
+       mapping = aes(y = PRES,
+                     x = pm2.5)) + 
+  geom_point() +
+  geom_smooth(method = "glm", 
+              se = FALSE,
+              method.args = list(family = "binomial")) 
+```
+
+
+```{r}
+## ----logRegrdf--------------------------------------------------
+glm.df_2 <- glm(PRES ~ pm2.5, 
+                data = df, 
+                family = "binomial")
+summary(glm.df_2)
+```
+
+```{r}
+## ----fitteGLm-----------------------------------------------------
+library(dplyr)
+fitted(glm.df_2) %>% round(digits = 2)
+
+
+## ----discretise---------------------------------------------------
+fitted.df_2.disc <- ifelse(fitted(glm.df_2) < 0.5,
+                       yes = 0, no = 1)
+head(fitted.df_2.disc)
+```
+
+```{r}
+## ----comapreObsFitted---------------------------------------------
+d.obs.fit.df_2 <- data.frame(obs = df$hour, 
+                             fitted = fitted.df_2.disc) 
+head(d.obs.fit.df_2)
+```
+
+```{r}
+## ----tableFotOBs--------------------------------------------------
+table(d.obs.fit.df_2$obs)
+## 14 success and 13 failures in the real data
+##
+table(obs = d.obs.fit.df_2$obs,
+      fit = d.obs.fit.df_2$fitted)
+```
+
+
+### 7.1 Interpreting coefficients in a Poisson model
+
+```{r}
+glm.df_test <- glm(hour ~ . , data = df, family = "poisson")
+summary(glm.df_test)
+```
+
+```{r}
+glm.df_test <- glm(day ~ . , data = df, family = "poisson")
+summary(glm.df_test)
+```
+
+```{r}
+glm.df_test <- glm(PRES ~ . , data = df, family = "poisson")
+summary(glm.df_test)
+```
+```{r}
+glm.df_test <- glm(Is ~ . , data = df, family = "poisson")
+summary(glm.df_test)
+```
+
+```{r}
+glm.df_test <- glm(Ir ~ . , data = df, family = "poisson")
+summary(glm.df_test)
+```
+
+### 7.1.1 Interpreting coefficients in a Poisson model: Factors
+
+```{r}
+
+coef(glm.df_test)["cbwdNW"]
+```
+
+```{r}
+
+exp(coef(glm.df_test)["cbwdNW"])
+```
+```{r}
+df[1, ]
+```
+
+
+```{r}
+fitted.first.test <- fitted(glm.df_test)[1] 
+fitted.first.test
+```
+
+```{r}
+first.test.as.NE <- df[1, ] 
+first.test.as.NE$cbwd <- "NE" 
+first.test.as.NE
+```
+
+```{r}
+pred.first.test_1.NE <- predict(glm.df_test,
+type = "response", # ! important to set argument "type" to response!
+newdata = first.test.as.NE) 
+pred.first.test_1.NE
+```
+
+```{r}
+
+fitted.first.test * exp(coef(glm.df_test)["cbwd"])
+```
+
+### 7.1.2 Interpreting coefficients in a Poisson model: Continuous predictors
+
+```{r}
+exp.coef.hour <- exp(coef(glm.df_test)["hour"]) 
+print(exp.coef.hour, digits = 6)
+```
+
+```{r}
+range(df$hour)
+```
+```{r}
+coef.hour.5 <- coef(glm.df_test)["hour"] * 5 
+coef.hour.5
+##
+```
+
+```{r}
+print(exp(coef.hour.5), digits = 5)
+```
+
+### 7.2 Interpreting the coefficients of a Binomial model
+
+```{r}
+coef(glm.df_1)
+```
+```{r}
+exp(coef(glm.df_1))
+```
+```{r}
+exp(coef(glm.df_1)["cbwdNE"])
+```
+
+### 7.2.2 Interpreting coefficients in a Binomial model: Factors
+
+```{r}
+
+```
+
+### 7.3 Overdispersion 
+
+### 7.3.1 Overdispersion: In Poisson Models
+
+```{r}
+quasi.glm.df_test <- glm(hour ~ . ,
+                            data = df,
+                     family = "quasipoisson")
+##
+summary(quasi.glm.df_test)
+```
+
+### 7.4 GAMs and GLMs
+
+```{r}
+library(mgcv)
+gam.df_test <- gam(hour ~ pm2.5 +
+                        s(DEWP) +
+                        s(TEMP),
+                      family = "quasipoisson", data = df)
+## 
+summary(gam.df_test)
+```
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+########################################################
+########################################################
+
+
+## Lab 8: Cross Validation
+
+```{r}
+lm.cv.1 <-lm(pm2.5 ~ cbwd + DEWP + 
+               TEMP + 
+               PRES,
+             data = df)
+
+
+lm.cv.2 <- lm(pm2.5 ~ cbwd + poly(DEWP, degree = 9) + 
+               poly(TEMP, degree = 9) + 
+               poly(PRES, degree = 9) +
+                poly(Iws, degree = 9) +
+                poly(Ir, degree = 4) +
+                poly(Is, degree = 3),
+             data = df)
+```
+
+```{r}
+summary(lm.cv.1)$r.squared
+summary(lm.cv.2)$r.squared
+```
+
+```{r}
+## ----splitData--------------------------------------------------
+set.seed(12)
+nrow(df) / 2
+train.YES <- sample(x = c(TRUE, FALSE), 
+                    size = nrow(df), 
+                    replace = TRUE)
+head(train.YES)
+table(train.YES)
+
+
+## ----trainTest--------------------------------------------------
+## 1) prepare data
+df.train <- df[train.YES, ]
+df.test <- df[!train.YES, ]
+##
+nrow(df.train)
+nrow(df.test)
+##
+## 2) fit the model with "train" data
+lm.df.1.train <- lm(formula = formula(lm.cv.1),
+                       data = df.train)
+## 
+## 3) make prediction on the test data
+predicted.df.1.test <- predict(lm.df.1.train,
+                                newdata = df.test)
+##
+## 4) compute R^2
+cor(predicted.df.1.test, df.test$pm2.5)^2
+
+
+## ----trainTestCOmplex-------------------------------------------
+## 2) fit the model with "train" data
+lm.df.2.train <- lm(formula = formula(lm.cv.2),
+                       data = df.train)
+## 
+## 3) make prediction on the test data
+predicted.df.2.test <- predict(lm.df.2.train,
+                                newdata = df.test)
+##
+## 4) compute R^2
+cor(predicted.df.2.test, df.test$pm2.5)^2
+```
+
+
+```{r}
+set.seed(121)
+##
+r.squared.simple <- c()
+r.squared.complex <- c()
+##
+for(i in 1:10^2){
+  ## 1) prepare data
+  train.YES <- sample(x = c(TRUE, FALSE), 
+                    size = nrow(df), 
+                    replace = TRUE)
+  df.train <- df[train.YES, ]
+  df.test <- df[!train.YES, ]
+  ##
+  ## simple model ##
+  ##
+  ## 2) fit the model with "train" data
+  lm.df.1.train <- lm(formula = formula(lm.cv.1),
+                       data = df.train)
+  ## 
+  ## 3) make prediction on the test data
+  predicted.df.1.test <- predict(lm.df.1.train,
+                                newdata = df.test)
+  ##
+  ## 4) compute R^2
+  r.squared.simple[i] <- cor(predicted.df.1.test,
+                             df.test$pm2.5)^2
+  ##
+  ## complex model ##
+  ##
+  ## 2) fit the model with "train" data
+  lm.df.2.train <- lm(formula = formula(lm.cv.2),
+                       data = df.train)
+  ## 
+  ## 3) make prediction on the test data
+  predicted.df.2.test <- predict(lm.df.2.train,
+                                newdata = df.test)
+  ##
+  ## 4) compute R^2
+  r.squared.complex[i] <- cor(predicted.df.2.test,
+                              df.test$pm2.5)^2
+  }
+
+
+## ----meanRsquared-----------------------------------------------
+mean(r.squared.simple)
+mean(r.squared.complex)
+
+
+## ----boxplotCV--------------------------------------------------
+boxplot(r.squared.simple, r.squared.complex)
+
+```
+
+
+
+
+########################################################
+########################################################
+
+
+## Lab 9: Decision trees
+
+### 9.1 Regression Trees
+
+```{r}
+library(tree)
+library(ggplot2)
+
+set.seed(99999)
+```
+
+```{r}
+#SET 1
+
+##############   Regression Trees   ##########################
+data <- df
+
+hist(data$pm2.5) #Continuos variable --> regression tree
+```
+
+```{r}
+tree.regression.data <- tree(pm2.5~., data=data)
+
+summary(tree.regression.data)
+# Output:
+#   - There are 9 terminal nodes (leaves) of the tree.
+#   - Here "residual mean deviance" is just mean squared error: we have an RMS error of 0.6802.
+```
+
+```{r}
+plot(tree.regression.data)
+text(tree.regression.data, pretty=1, cex=0.75)
+```
+
+```{r}
+#let's do some predictions, on the data already used for the training --> training error
+tree.regression.data.pred <- predict(tree.regression.data, data, type="vector")
+
+# compare predictions of regression tree with true values (visually)
+plot(tree.regression.data.pred,data$pm2.5)
+abline (0 ,1) # compare with the function f(x)=x (intercept 0, slope 1)
+```
+
+```{r}
+error <- tree.regression.data.pred-data$pm2.5
+element_ID <- 1:length(error)
+plot(element_ID,error)
+title(main="Analysis of the residuals")
+abline(0 ,0, lwd=5,lty="dotted")
+abline(1.66 ,0, lwd=2, col="red", lty="dotted")
+abline(-1.66 ,0, lwd=2, col="red", lty="dotted")
+```
+
+```{r}
+library(tidyverse)
+error_dataframe <- tibble(element_ID,error)
+ggplot(data=error_dataframe) + geom_boxplot(aes(y=error))
+```
+
+```{r}
+hist(error)
+```
+
+```{r}
+(RSS <- sum((data[6]-tree.regression.data.pred)^2))
+(MSE <- RSS/length(tree.regression.data.pred))
+(MSE <- mean(((data[6]-tree.regression.data.pred)^2)$pm2.5, na.rm = TRUE)) # MSE = 0.6801
+(deviation <- sqrt(MSE)) # square root of the MSE = 0.8246701 (in thousand of units)
+
+# average error on each estimation : within about 1660 units sold from the true median
+plot(element_ID,error)
+title(main="Analysis of the residuals (with average)")
+abline(0 ,0, lwd=3,lty="dotted")
+abline(1.66 ,0, lwd=2, col="red", lty="longdash")
+abline(-1.66 ,0, lwd=2, col="red", lty="longdash")
+```
+
+```{r}
+#let's add a manual split in train/test for the dataset (70/30)
+#this will show the overfitting effect: very evident in fully growt (unpruned) tree
+ratio <- 0.7
+total <- nrow(data)
+
+train <- sample(1:total, as.integer(total * ratio))
+
+tree.regression.data.2 <- tree(pm2.5~., data, subset=train)
+plot(tree.regression.data.2)
+text(tree.regression.data.2, pretty=1, cex=0.75)
+#partition.tree(tree.regression.data.2)
+
+tree.regression.data.2.pred <- predict(tree.regression.data.2, data[-train,], type="vector")
+########################################################################################################### --> for documentation, use the predict.tree help (from the tree package) --> help(predict.tree)
+
+#let's check the cumulated squared error --> RSS
+(RSS.2.in <- mean(((data[train,][6]-predict(tree.regression.data.2, data[train,], type="vector"))^2)$pm2.5))
+(RSS.2 <- mean(((data[-train,][6]-tree.regression.data.2.pred)^2)$pm2.5))
+
+errors.2.in <- predict(tree.regression.data.2, data[train,], type="vector")-data[train,]$pm2.5
+#element.2.in <- 1:length(errors.2.in)
+element.2.in <- as.integer(names(errors.2.in))
+errors.2.in_dataframe <- tibble(element.2.in,errors.2.in,"TRAIN")
+colnames(errors.2.in_dataframe) <- c('ID','error','type')
+errors.2 <- predict(tree.regression.data.2, data[-train,], type="vector")-data[-train,]$pm2.5
+#element.2 <- 1:length(errors.2)
+element.2 <- as.integer(names(errors.2))
+errors.2.out_dataframe <- tibble(element.2,errors.2,"TEST")
+colnames(errors.2.out_dataframe) <- c('ID','error','type')
+
+errors.2_dataframe <- bind_rows(errors.2.in_dataframe,errors.2.out_dataframe) 
+errors.2_dataframe <- arrange(errors.2_dataframe, ID)
+
+ggplot(data = errors.2_dataframe, mapping = aes(x = ID,y = error, color = type)) + 
+  geom_point() + geom_boxplot(alpha = 0.5)
+```
+
+
+### 9.1 Classification Trees
+
+```{r}
+##############   Classification Trees   ##########################
+
+#SET 2
+# let's instead predict the categorical variable "cbwd" (--> factor)
+table(data$cbwd) #Categorical variable --> classification tree
+```
+
+```{r}
+tree.classification.data <- tree(cbwd~., data=data, subset=train)
+summary(tree.classification.data)
+# Output:
+#   - There are 7 terminal nodes (leaves) of the tree.
+#   - Here "residual mean deviance" is just mean squared error: we have an RMS error of 1.842 and an misclassification rate of 36%.
+```
+
+```{r}
+plot(tree.classification.data)
+text(tree.classification.data, pretty=1, cex=0.75)
+```
+
+```{r}
+#let's do some predictions, on the data already used for the training --> training error
+tree.classification.data.pred <- predict(tree.classification.data, data[train,], type="class")
+
+# confusion table to determine classification error on *train data*
+(tree.classification.data.pred.ct <- table(tree.classification.data.pred, data[train,]$cbwd))
+tree.classification.data.pred.correct <- 0
+tree.classification.data.pred.error <- 0
+for (i1 in 1:3) {
+  for (i2 in 1:3) {
+    if (i1 == i2) {
+      tree.classification.data.pred.correct <- tree.classification.data.pred.correct + tree.classification.data.pred.ct[i1,i2]
+    }else{
+      tree.classification.data.pred.error <- tree.classification.data.pred.error + tree.classification.data.pred.ct[i1,i2]
+    }
+  }
+}
+(tree.classification.data.pred.rate <- tree.classification.data.pred.correct/sum(tree.classification.data.pred.ct)) 
+# portion of correctly classified observations 32.7%
+(tree.classification.data.pred.error <- 1 - tree.classification.data.pred.rate) 
+# train error (pruned): 67.2%
+```
+
+```{r}
+# and on test data --> test error
+tree.classification.data.pred.test <- predict(tree.classification.data, data[-train,], type="class")
+# confusion table to determine classification error on *test data*
+(tree.classification.data.pred.test.ct <- table(tree.classification.data.pred.test, data[-train,]$cbwd))
+tree.classification.data.pred.correct <- 0
+tree.classification.data.pred.error <- 0
+for (i1 in 1:3) {
+  for (i2 in 1:3) {
+    if (i1 == i2) {
+      tree.classification.data.pred.correct <- tree.classification.data.pred.correct + tree.classification.data.pred.test.ct[i1,i2]
+    }else{
+      tree.classification.data.pred.error <- tree.classification.data.pred.error + tree.classification.data.pred.test.ct[i1,i2]
+    }
+  }
+}
+(tree.classification.data.pred.rate <- tree.classification.data.pred.correct/sum(tree.classification.data.pred.test.ct)) 
+# portion of correctly classified observations 32.9%
+(tree.classification.data.pred.error <- 1 - tree.classification.data.pred.rate) 
+# test error (pruned): 67.1%
+
+#data_pred <- mutate(data, prediction= tree.classification.data.pred, error = (data$cbwd!=tree.classification.data.pred))
+
+```
+
+### 9.3 Pruning Trees
+
+```{r}
+##############   Pruning Trees   ##########################
+
+#SET 3
+
+#let's use now crossvalidation for pruning, going back to the regression case...
+tree.regression.data.pruning = cv.tree(tree.regression.data.2, FUN = prune.tree)
+plot(tree.regression.data.pruning)
+```
+
+```{r}
+# plot the cross-validation error-rate as a function of both size and \alpha (k):
+par(mfrow=c(1,2))
+plot(tree.regression.data.pruning$size, tree.regression.data.pruning$dev, type="b") # type="b": plot both, points and lines
+plot(tree.regression.data.pruning$k, tree.regression.data.pruning$dev, type="b")
+par(mfrow=c(1,1))
+```
+
+```{r}
+tree.regression.data.pruned <- prune.tree(tree.regression.data.2, best = 7)
+
+plot(tree.regression.data.pruned)
+text(tree.regression.data.pruned, pretty=1, cex=0.75)
+```
+
+```{r}
+tree.regression.data.pruned2 <- prune.tree(tree.regression.data.2, best = 6)
+
+plot(tree.regression.data.pruned2)
+text(tree.regression.data.pruned2, pretty=1, cex=0.75)
+```
+
+```{r}
+summary(tree.regression.data.pruned)
+summary(tree.regression.data.pruned2)
+```
+
+```{r}
+(RSS.cv.in <- sum((data[train,][6]-predict(tree.regression.data.pruned, data[train,], type="vector"))^2)/nrow(data[train,]))
+```
+
+```{r}
+tree.regression.data.pruned.pred <- predict(tree.regression.data.pruned, data[-train,], type="vector")
+(RSS.cv <- sum((data[-train,][6]-tree.regression.data.pruned.pred)^2)/length(tree.regression.data.pruned.pred))
+```
+
+```{r}
+#and for the classification case...
+tree.classification.data.pruning <- cv.tree(tree.classification.data, FUN = prune.misclass)
+summary(tree.classification.data.pruning)
+```
+
+```{r}
+tree.classification.data.pruning
+```
+
+```{r}
+# plot the cross-validation error-rate as a function of both size and \alpha (k):
+par(mfrow=c(1,2))
+plot(tree.classification.data.pruning$size, tree.classification.data.pruning$dev, type="b") # type="b": plot both, points and lines
+plot(tree.classification.data.pruning$k, tree.classification.data.pruning$dev, type="b")
+par(mfrow=c(1,1))
+```
+
+```{r}
+# do the actual pruning
+prune.tree.classification.data <- prune.misclass(tree.classification.data, best=6) 
+# prune.misclass: 
+# is an abbreviation for prune.tree(method = "misclass") for use with cv.tree.
+# Here, prune.tree determines the nested cost-complexity sequence  
+# best=5: get the 6-node tree in the cost-complexity sequence 
+
+summary(prune.tree.classification.data)
+```
+
+```{r}
+# plot the pruned tree
+plot(prune.tree.classification.data)
+text(prune.tree.classification.data,pretty=0)
+```
+
+```{r}
+# use pruned tree to predict *test data*
+prune.tree.classification.data.pred <- predict(prune.tree.classification.data,  data[-train,], type="class")
+
+# confusion table to determine classification error on *test data*
+(prune.tree.classification.data.pred.ct <- table(prune.tree.classification.data.pred, data[-train,]$cbwd))
+(prune.tree.classification.data.pred.correct <- sum(prune.tree.classification.data.pred==data[-train,]$cbwd)/sum(prune.tree.classification.data.pred.ct)) 
+# portion of correctly classified observations 63,5%
+(prune.tree.classification.data.pred.testError <- 1 - prune.tree.classification.data.pred.correct) 
+# test error (pruned): 36.4%
+
+# compare with *test error* of unpruned tree:
+tree.classification.data.pred.error 
+# test error (unpruned): 67.0% --> unpruned tree has higher test error
+```
+
+### 9.4 Bagging
+
+```{r}
+##############   Bagging   ##########################
+
+# We apply Bagging (and  later Random Forests) on Beijing data set
+# Here we apply bagging and random forests to the Beijing data, using the randomForest package in R.
+# The exact results obtained in this section may depend on the version of R and the version of the randomForest package installed on your computer.
+# Recall that bagging is just a special case of random forests with m = p.
+
+library(MASS)
+library(ipred)
+```
+
+```{r}
+# Setup a training and test set for the data data set.
+set.seed (1)
+train = sample(1:nrow(data), nrow(data)/2)
+data.test=data[-train ,]
+
+# Apply bagging using the ipred package in R. 
+bag.data=bagging(pm2.5~., data=data, subset=train, nbagg=25, coob =TRUE)
+print(bag.data)
+#0.7939^2 --> 0.6302772
+```
+
+```{r}
+#alternatively, we could have used the random forrect, as long as we use all the predictors together for every set
+library(randomForest)
+bag.data.2=randomForest(pm2.5~., data=data, subset=train, mtry=12, importance =TRUE)
+# mtry = 13 means that we should use all 13 predictors for each split of the tree, hence, do bagging (not randomForrest).
+print(bag.data.2)
+```
+
+```{r}
+# How well does the bagged model perform on the test set? 
+yhat.bag = predict(bag.data,newdata=data[-train,])
+plot(yhat.bag, data.test[,"pm2.5"])
+abline(0,1)
+mean((yhat.bag-data.test[,"pm2.5"])^2)
+# The test set MSE associated with the bagged regression tree is 13.444, 
+# That's almost half that obtained using an optimally-pruned single tree 
+# (investigate this on your own).
+```
+
+```{r}
+# Investigating variable importance (only feasible with randomForest objects, even if used only for bagging...)
+importance(bag.data.2)
+```
+
+```{r}
+# Two measures of variable importance are reported:
+# 1) The first is based upon the mean *decrease of accuracy*
+# in predictions on the out of bag samples when a given variable 
+# is excluded from the model.
+# 2) THe second is a measure of the total *decrease in node impurity* 
+# that results from splits over that variable, averaged over all trees.
+varImpPlot (bag.data.2)
+```
+
+### 9.5 Random Forest
+
+```{r}
+##############   Random Forests   ##########################
+
+# Growing a random forest proceeds in exactly the same way, 
+#     except that we use a smaller value of the mtry argument. 
+# By default, randomForest() uses $p/3$ variables when building 
+#     a random forest of regression trees, and $\sqrt{p}$ variables 
+#     when building a random forest of classification trees.
+
+# Building a random forest on the same data set using mtry = 6. 
+# Comment on the difference from the test MSE from using the random 
+# forest compared to bagging.
+
+library(randomForest)
+
+set.seed(1)
+rf.data=randomForest(pm2.5~.,data=data,subset=train, mtry=6,importance =TRUE)
+yhat.rf = predict(rf.data ,newdata=data[-train ,])
+mean((yhat.rf-data.test[,"pm2.5"])^2)
+# We see that the test MSE for a random forest is 11.66; 
+# this indicates that random forests yielded an improvement over bagging 
+# in this case (versus 13.444)
+```
+
+```{r}
+# Investigating variable importance 
+importance(rf.data)
+# Two measures of variable importance are reported:
+# 1) The first is based upon the mean *decrease of accuracy*
+# in predictions on the out of bag samples when a given variable 
+# is excluded from the model.
+# 2) THe second is a measure of the total *decrease in node impurity* 
+# that results from splits over that variable, averaged over all trees.
+```
+
+```{r}
+varImpPlot (rf.data)
+# The results indicate that across all of the trees considered in the 
+# random forest, the wealth level of the community (lstat) and the house size (rm) 
+# are by far the two most important variables.
+```
+
+### 9.6 Boosting
+
+```{r}
+##############   Boosting   ##########################
+
+library(gbm)
+# We use the gbmpackage, and within it the gbm() function, 
+# to fit boosted regression trees to the data data set.
+
+# Perform boosting on the training data set, treating this as a regression problem. 
+set.seed (1)
+boost.data=gbm(pm2.5~.,data=data[train,],
+                 distribution="gaussian",n.trees=5000, interaction.depth=4)
+# We run gbm() with the option distribution="gaussian" since this 
+#     is a regression problem.
+# If it were a binary classification problem, 
+#     we would use distribution="bernoulli".
+# "interaction.depth" refers to the maximum depth of variable interactions. 
+#     1 implies an additive model, 
+#     2 implies a model with up to 2-way interactions, etc.
+
+summary(boost.data)
+# We see that lstat and rm are by far the most important variables (again).
+```
+
+```{r}
+# Producing partial dependence plots for these two variables (lstat and rm). 
+plot(boost.data ,i="month") 
+plot(boost.data ,i="DEWP")
+# These plots illustrate the marginal effect of the selected variables 
+# on the response after integrating out the other variables. In this case, 
+# as we might expect, median house prices are increasing with rm and decreasing 
+# with lstat.
+```
+
+```{r}
+# Now use the boosted model to predict pm2.5 on the test set. Report the MSE.
+yhat.boost=predict(boost.data,newdata=data[-train,], n.trees=5000)
+mean((yhat.boost -data.test[,"pm2.5"])^2)
+# The test MSE obtained is 10.8; better than the test MSE for random 
+# forests and way superior to that for bagging.
+```
+
+```{r}
+# What happens if we vary the shrinkage parameter from its 
+# default of 0.001 to 0.02? Report the test MSE.
+boost.data=gbm(pm2.5~.,data=data[train,],distribution="gaussian",n.trees=5000, interaction.depth=4,shrinkage = 0.02, verbose = F)
+yhat.boost=predict(boost.data,newdata=data[-train,], n.trees=5000)
+mean((yhat.boost -data.test[,"pm2.5"])^2)
+# In this case, using $\lambda = 0.02$ leads to a lower test MSE (10.03) than $\lambda = 0.001.$ (10.8) --> better model
+```
+
+```{r}
+#and what about $\lambda = 0.2$?
+boost.data=gbm(pm2.5~.,data=data[train,],distribution="gaussian",n.trees=5000, interaction.depth=4,shrinkage = 0.2, verbose = FALSE)
+yhat.boost=predict(boost.data,newdata=data[-train,], n.trees=5000)
+mean((yhat.boost -data.test[,"pm2.5"])^2)
+#higher test MSE (11.5) --> worst model --> overfitting effect!!!
+```
+
