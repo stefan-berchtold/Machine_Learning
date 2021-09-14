@@ -1,0 +1,622 @@
+---
+title: "MSc.IDS - Machine Learning I"
+author: "Stefan Berchtold, Gianni Pinelli, Stefan Hüttenmoser"
+date: '11.06.2021 '
+output:
+  html_document:
+    code_folding: hide
+    theme: yeti
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+subtitle: Report of Group Work 'Garments Worker Productivity'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose of the report
+
+The pupose of this report is to show the progress made during the course "Machine Learning I" in the Master's programm "Applied Information and Data Science" at the Hochschule Luzern (HSLU). The goals is to use all the methods taught during the course on a self-chosen dataset. We were free to choose any data set as long as it fulfills following requirements:
+
+-Moderate size(N= [10^3, 10^5]), 10-20 predictors\
+-Real data\
+-Contain both continous and categorical variables\
+-At least one categorical variable must have more than two levels
+
+## Dataset
+
+The dataset contains important attibutes of the garment manufacturing process and the productivity of the employees. It contains following variables:
+
+-date: Date in MM-DD-YYY\
+-day: Day of the week\
+-quarter: One-fourth of a year\
+-no_of_workers: Number of workers in a particular team at a certain time\
+-team: Number ranging from 1 to 12 for different teams\
+-no_of_style_change: Number of changes in the style of a particular product\
+-targeted_productivity: Targeted productivity set by the manager for each team for each day, ranges from 0.07 to 0.8\
+-smv: Standard Minute Value, it is the allocated time for a task\
+-wip: Work in progress. Includes the number of unfinished items for products\
+-over_time: The amount of overtime by each team in minutes\
+-incentive: The amount of financial incentive, in Bangladesh-Taka (currency of Bangladesh) that enables or motivates a particular course of action\
+-idle_time: The amount of time when the production was interrupted due to several reasons\
+-idle_men: The number of workers who were idle due to production interruption\
+-actual_productivity: The actual % of productivity that was delivered by the workers. It ranges from 0-1
+
+
+## Data Preaparation
+
+In every Data Science project the first step always has to be the data preparation. This section shows the individual steps
+
+```{r }
+garment <-read.csv(file = "~/ML1_project/garments_worker_productivity.csv", stringsAsFactors = FALSE, strip.white = TRUE)
+summary(garment)
+str(garment)
+```
+
+
+The only column which has NA's is wip, it is reasonable to assume that for work in progess a NA indicates that no work is in progress so we change the NA's to 0. To do classification task we take the difference of actual_productivity and targeted_productivity (productivity_difference) and transform it to 1, if actual_productivity is bigger or equal than targeted_productivity (that means that the productivity goals are met or exceeded). If actual_productivity is smaler than targeted_productivity it is transformed to 0 (that means that the productivity goals are not met).The new file is saved as a RDS.
+
+
+```{r }
+garment[is.na(garment)]<- 0
+attach(garment)
+garment$productivity_difference <- actual_productivity-targeted_productivity
+garment$productivity_reached <- ifelse(garment$productivity_difference>=0,1,0)
+saveRDS(garment, file = 'garments.rds')
+
+```
+In the next step we load the RDS file and delete the column date, since it is not used in the analysis. Since there are still columns which should contain categorical variables but have different data types namely: quarter, department, day and team, we transform those columns to factors (the data type of categorical variables in R)
+
+
+```{r,message=FALSE}
+library(dplyr)
+df.garment <- readRDS('garments.rds')
+df.garment <- select(df.garment,-date)
+cols <- c('quarter', 'department', 'day', 'team')
+df.garment[cols] <-lapply(df.garment[cols], factor)
+```
+Now the data is ready to be analyzed we start with a linear model.
+
+##  Linear Model
+
+As a first step we fit a linear model, with actual_productivity as dependent variable, and all the remaining variables, besides productivity_difference and productivity_reached because they are based on actual_productivity and might therefore skew the results, as independent varialbes.
+
+```{r}
+lm.garment.0 <- lm(actual_productivity ~ .-productivity_difference - productivity_reached , data =df.garment)
+summary(lm.garment.0)
+```
+The variables targeted_productivity, idle_men, no_of_worker and most of team seem to have a very strong effect on the response variable. No_of_style_change has a strong effect and department and over_time have a weak effect. The categorical variables like quarter have different signs and team have negative signs. Day seems to have no effect at all and department again has a negativ sign. To check the categorical variables effect on the response variable we test them separately.
+
+```{r}
+lm.garmet.cat <- lm(actual_productivity~ department + day + quarter + team, data= df.garment)
+drop1(lm.garmet.cat, test = 'F')
+```
+
+The variable day seems not to have a effect on actual_productivity, since we assume that it does not interact with any other variable we can drop that variable for the next model. The variables quarter and team seem to be associated with the response variable to better see how, we visualize them.
+
+
+```{r}
+par(mfrow = c(1, 2))
+plot(factor(quarter), actual_productivity, ylab = 'Actual Productivity', xlab = 'Quarter')
+plot(factor(team), actual_productivity, ylab = 'Actual Productivity', xlab = 'Team No.')
+
+```
+
+The first plot shows that, the average actual_productivity in quarter 5 was higher than the remaining quarters, and that the productivity seems to drop after the first two quarters. Those are nice insights but this variable will hardly contribute to predict the actual productivity. Furthermore, it will not help the business to take actions to increase the the actual productivity e.g. shift work steps to quarter 5 and the actual productivity will increase 0.09 (if every other variable stays the same) does not make much sense.\
+The second plot shows that team number one is, as the name says, number one reagarding actual average productivity. But like the variable quarter it will probably not help to predict the future actual productivity nor will it help the management to take actions to increase the productivity (again shifting work to team number to 1 to achieve higher actual productivity does not make sense). \
+Those two variables have descriptive power but lack predictive power, whereas department could have predictive power as well and does make more sense for management action, e.g. shift more volume, faster from sewing to finishing might increase the actual productivitiy.
+In the next linear model we do not use them and subsequently compare the RMSE. 
+
+```{r}
+lm.garment.1 <- lm(actual_productivity ~ .-productivity_difference - productivity_reached -day - team - quarter , data =df.garment)
+summary(lm.garment.1)
+```
+The effects of the remaining variables do not change but the adjusted R squared drops about 5%. The variables department targeted_productivity and no_of_workers seem to have a postive significant effect,so increasing targeted productivity and number of workes might increase the actual productivity. Smv, over_time, idle_men and no_of_style_change seem to have a negative effect. It makes sense that, if there is more workers who are idle and more style changes and the minutes to finish a task are increased that it might have a negative effect on productivity.
+Let us now have a look at the RMSE
+
+
+```{r}
+RSS.0 <- c(crossprod(lm.garment.0$residuals))
+MSE.0 <- RSS.0 / length(lm.garment.0$residuals)
+RMSE.0 <- sqrt(MSE.0)  
+paste('The RMSE of lm.garment.0 is',RMSE.0) 
+RSS.1 <- c(crossprod(lm.garment.1$residuals))
+MSE.1 <- RSS.1 / length(lm.garment.1$residuals)
+RMSE.1 <- sqrt(MSE.1)  
+paste('The RMSE of lm.garment.0 is',RMSE.1) 
+  
+```
+
+The RMSE differs not that much so for interpretability reasons the second linear model is prefered.
+
+
+
+## Generalised Linear Model with family set to Poisson
+
+The management is interested if an increase of actual productivity could lead to more incentives paid or more over_time. We analyzed that using a Generalised Linear Model with family set to Poisson.
+
+```{r}
+glm.garment.1 <- glm(incentive ~ .-quarter - day -team, family = 'poisson', data = df.garment)
+summary(glm.garment.1)
+
+```
+
+```{r}
+exp(coef(glm.garment.1)['actual_productivity'])
+``
+`
+```{r}
+coef.visits.50 <- coef(glm.garment.1)['actual_productivity'] * 50
+coef.visits.50
+
+print(exp(coef.visits.50), digits = 5)
+```
+The management is interested if an increase of actual productivity could lead to more incentives paid or more over_time. We analyzed that using a Generalised Linear Model with family set to Poisson
+
+```{r}
+glm.garment.1 <- glm(as.integer(no_of_workers) ~.-quarter - day -team -productivity_difference, family = 'poisson', data = df.garment)
+summary(glm.garment.1)
+```
+The variables department, smv, over_time, idle_me, no_of_style_change and actual_prodcutivity are positively associated with the nuber of workers, whereas targeted_productivity and productivity_reached is negatively associated with the number of workers
+
+```{r}
+exp(coef(glm.garment.2)['actual_productivity'])-1
+```
+
+
+
+## Generalised Linear Model with family set to Binomial 
+
+To see which variables have an influence if the targeted prodcutivity is reached or not we use a GLM set to binominal.
+
+```{r}
+glm.garment.2 <- glm(productivity_reached ~ department + targeted_productivity + smv + wip + over_time + incentive  + idle_time + idle_men + no_of_style_change + no_of_workers, data = df.garment )
+
+summary(glm.garment.2)
+```
+
+
+```{r}
+exp(coef(glm.garment.2))
+
+```
+
+By increasing the targeted_productivity, wip, incentives, idle_time and number of workers we will obtain an increased productivity_reached in the odds of more than one.
+By increasing the smv, over_time and idle_men  we will obtain an increased productivity_reached in the odds of less than one.
+
+
+
+## Linear model with Polynominals
+
+To check if there are any non linear effects on the response variable we plot the variables used in the linear models against actual productivity.
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+
+plot1 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = targeted_productivity)) +
+geom_point()
+
+plot2 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = smv)) +
+geom_point()
+
+
+plot3 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = wip)) +
+geom_point()
+
+
+plot4 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = over_time)) +
+geom_point()
+
+
+plot5 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = incentive)) +
+geom_point()
+
+
+plot6 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = idle_time)) +
+geom_point()
+
+plot7 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = idle_men)) +
+geom_point()
+
+
+
+plot8 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = no_of_style_change)) +
+geom_point()
+
+plot9 <- ggplot(data = df.garment,
+mapping = aes(y = actual_productivity,
+x = no_of_workers)) +
+geom_point()
+
+
+grid.arrange(plot1 + geom_smooth(), plot2 + geom_smooth(),plot3 + geom_smooth(), plot4 +geom_smooth(),plot5 + geom_smooth(),plot6 + geom_smooth(), plot7 +geom_smooth(),plot8 + geom_smooth(), plot9 + geom_smooth(), nrow=3, ncol=3)
+```
+
+There seems to be non linear effects in the variables no_of_workers and smv. For incentive idle_time and wip there seems to be non linear effects but only due to outliers.
+
+```{r}
+lm.garment.2 <- lm(actual_productivity~department + targeted_productivity + poly(smv, degree = 3) + wip + over_time + incentive + idle_time + idle_men + no_of_style_change +poly(no_of_workers, degree = 3))
+
+summary(lm.garment.2)
+```
+The polynominals seem to have an effect on the response variable. To see if the model with higher complexity outperforms simple multiple linear regression we check the RMSE of that model
+
+
+```{r}
+RSS.2 <- c(crossprod(lm.garment.2$residuals))
+MSE.2 <- RSS.2 / length(lm.garment.2$residuals)
+RMSE.2 <- sqrt(MSE.2)  
+paste('The RMSE of lm.garment.2 is',RMSE.2)
+```
+The RMSE is lower but the rate of improvement,from over point of view, is too low for the increase of complexitiy.
+
+## Generalised Additive Model
+
+
+
+
+```{r}
+library(mgcv)
+
+gam.1 <- gam(actual_productivity ~ department+ targeted_productivity + s(smv) + wip + over_time + incentive +idle_time + idle_men + no_of_style_change + s(no_of_workers), data = df.garment) 
+summary(gam.1)
+
+plot(gam.1, residuals = TRUE, select = 1, all.terms = TRUE)
+gam.check(gam.1)
+```
+
+
+
+## Support Vector Machines
+
+Normalization
+
+```{r}
+library(caret)
+
+preproc1 <- preProcess(df.garment, method=c("center", "scale"))
+datn <- predict(preproc1, df.garment)
+saveRDS(datn, "normalized.rds")
+DF<- readRDS("normalized.rds")
+str(DF)
+
+```
+
+
+## SVM Classification
+
+
+```{r}
+library(tidyverse)
+theme_set(theme_bw())
+library(e1071)
+library(caret)
+library(kernlab)
+library(ISLR) 
+library(RColorBrewer)
+
+DF$date <- NULL
+DF$quarter <- NULL
+DF$day <- NULL
+DF$department <- NULL
+set.seed(123)
+DF$productivity_reached <-as.factor(DF$productivity_reached)
+
+str(DF)
+indices <- createDataPartition(DF$productivity_reached, p = .9, list = F)
+
+train <- DF %>% 
+  slice(indices)
+test_in <- DF %>% 
+  slice(-indices) %>% 
+  select(-productivity_reached)
+test_truth <- DF %>% 
+  slice(-indices) %>% 
+  pull(productivity_reached)
+
+set.seed(123)
+svm <- svm(productivity_reached ~ ., train, kernel = "linear", scale = TRUE, cost = 10)
+plot(svm, train, actual_productivity ~ targeted_productivity)
+plot(svm, train, actual_productivity ~ targeted_productivity, slice = list(smv =8.0, wip = 5.75))
+
+test_pred <- predict(svm, test_in) 
+table(test_pred)
+
+conf_matrix <- confusionMatrix(test_truth, test_pred) 
+conf_matrix
+
+set.seed(123)
+svm2 <- svm(productivity_reached ~ ., train, kernel = "radial", scale = TRUE, cost = 100) 
+summary(svm2)
+plot(svm2, train, actual_productivity ~ targeted_productivity)
+plot(svm2, train, actual_productivity ~ targeted_productivity, slice = list(smv =8.0, wip = 5.75))
+
+
+test_pred <- predict(svm2, test_in)
+table(test_pred)
+
+conf_matrix <- confusionMatrix(test_truth, test_pred) 
+conf_matrix
+
+
+# tune model to find optimal cost, gamma values
+obj <- tune.svm(productivity_reached ~ ., data = train, gamma = 2^(-1:1), cost = 2^(2:4))
+# show best model
+summary(obj)
+plot(obj)
+```
+
+## SVM Regression
+
+```{r}
+library(e1071)
+library(caret)
+
+# Regression example
+
+
+
+set.seed(123)
+indexes <- createDataPartition(DF$actual_productivity, p = .9, list = F)
+train <- DF[indexes, ]
+test <- DF[-indexes, ]
+
+str(train)
+train$foo
+str(test)
+test$foo
+
+model_reg <- svm(actual_productivity~., data=train)
+print(model_reg)
+
+svm(formula = actual_productivity ~ ., data = train)
+
+pred <- predict(model_reg, test)
+x <- 1:length(test$actual_productivity)
+plot(x, test$actual_productivity, pch=18, col="red")
+lines(x, pred, lwd="1", col="blue")
+
+sqrt(mean((test$actual_productivity - pred)^2))
+
+
+model_lm <- lm(actual_productivity~., data=train)
+pred_lm <- predict(model_lm, test)
+plot(x, test$actual_productivity, pch=18, col="red")
+lines(x, pred_lm, lwd="1", col="blue")
+sqrt(mean((test$actual_productivity - pred_lm)^2))
+
+```
+
+
+
+
+
+## ANN Regression Stefan H
+```{r}
+library(tidyverse)
+library(caret)
+library(neuralnet)
+
+productivity.raw <- read_csv("garments_worker_productivity.csv")
+
+productivity <- productivity.raw %>%
+  mutate(date = as.Date(date, format = "%d/%m/%Y")) %>%
+  mutate(quarter = factor(quarter, levels = c("Quarter1", "Quarter2", "Quarter3", "Quarter4"))) %>%
+  mutate(department = factor(department)) %>%
+  mutate(day = factor(day, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"))) %>%
+  mutate(team = factor(team))
+
+library(skimr)
+skim(productivity)
+
+productivity.no_na <- productivity %>% select(-date, -wip) %>% filter(!is.na(quarter))
+
+dmy <- dummyVars("~.", data = productivity.no_na)
+productivity.one_hot <- data.frame(predict(dmy, newdata = productivity.no_na))
+
+
+set.seed(123)
+indices <- createDataPartition(productivity.one_hot$actual_productivity, p = 0.8, list = FALSE)
+train <- productivity.one_hot %>% slice(indices)
+test <- productivity.one_hot %>% slice(-indices)
+boxplot(train$actual_productivity, test$actual_productivity, productivity.one_hot %>% sample_frac(0.2) %>% pull(actual_productivity))
+
+
+
+
+tuGrid <- expand.grid(.layer1=c(1,2), .layer2=c(0,2), .layer3=c(0))
+
+trCtrl <- trainControl(
+  method = 'repeatedcv', 
+  number = 2, 
+  repeats = 2, 
+  returnResamp = 'final'
+)
+
+models <- train(
+  x = productivity.one_hot %>% select(-actual_productivity),
+  y = productivity.one_hot %>% pull(actual_productivity),
+  method = 'neuralnet', 
+  metric = 'RMSE', 
+  linear.output = TRUE,
+  # be careful, does only work on x!
+  preProcess = c('center', 'scale'),
+  tuneGrid = tuGrid
+  ,
+  trControl = trCtrl
+)
+
+plot(models)
+plot(models$finalModel)
+
+models_compare <- resamples(list(models, models))
+summary(models_compare)
+
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(models_compare, scales=scales)
+```
+
+## ANN Gianni
+
+```{r}
+library(tidyverse)
+library(caret)
+library(neuralnet)
+
+
+df_nnr<- readRDS("garments.rds")
+df_nnr$date <- NULL
+df_nnr$quarter <- NULL
+df_nnr$day <- NULL
+df_nnr$department <- NULL
+df_nnr$productivity_difference <- NULL
+df_nnr$productivity_reached <- NULL
+str(df_nnr)
+
+preproc1 <- preProcess(df_nnr, method=c("center", "scale"))
+df_nnr <- predict(preproc1, df_nnr)
+summary(df_nnr)
+
+
+set.seed(123)
+indices <- createDataPartition(df_nnr$actual_productivity, p=.85, list = F)
+train <- df_nnr %>% slice(indices)
+test <- df_nnr %>% slice(-indices)
+boxplot(train$actual_productivity, test$actual_productivity, df_nnr %>% sample_frac(0.2) %>% pull(actual_productivity))
+
+max <- apply(df_nnr, 2, max) 
+min <- apply(df_nnr, 2, min)
+
+garments_scaled <- as.data.frame(scale(df_nnr, center = min, scale = max - min))
+train_scaled <- garments_scaled %>% slice(indices)
+test_scaled <- garments_scaled %>% slice(-indices)
+
+set.seed(42)
+garments_net = neuralnet(actual_productivity ~ ., train_scaled, hidden = 3, stepmax = 500000) 
+plot(garments_net)
+
+
+pred <- compute(garments_net, test %>% select(.,-actual_productivity))
+pred$net.result
+
+
+pred_scaled <- compute(garments_net, test_scaled %>% select(-actual_productivity))
+pred <- pred_scaled$net.result * (max(df_nnr$actual_productivity) - min(df_nnr$actual_productivity)) + min(df_nnr$actual_productivity) 
+pred
+
+plot(test$actual_productivity, pred, col='blue', pch=16, ylab = "predicted actual_productivity NN", xlab = "actual_productivity") 
+abline(0,1)                                                                                 
+      
+sqrt(mean((test$actual_productivity - pred)^2))
+
+set.seed(42)
+tuGrid <- expand.grid(.layer1=c(1:4), .layer2=c(0,2), .layer3=c(0))
+trCtrl <- trainControl( method = 'repeatedcv', number = 5,
+                        repeats = 10, 
+                        returnResamp = 'final'
+)
+models <- train(
+  x = df_nnr %>% select(-actual_productivity),
+  y = garments_scaled %>% pull(actual_productivity), 
+  method = 'neuralnet', metric = 'RMSE', 
+  linear.output = TRUE,
+  # be careful, does only work on x! preProcess = c('center', 'scale'), 
+  tuneGrid = tuGrid,
+  trControl = trCtrl
+)
+#plot(models)  
+
+
+
+```
+
+
+
+
+## Approximate Bayesian Computation
+
+```{r}
+
+rm(list = ls(all = TRUE))
+install.packages("abc")
+library(abc)
+
+# reading the data
+summary_stat <- read.csv("./summary_stat.csv", header = F)
+colnames(summary_stat) <- c("simulationID", "param.agents", "param.pubs", "out.a", "out.b", "out.c", "out.d")
+sim_data <- summary_stat[,4:7]
+sim_param <- summary_stat[,2:3]
+obs_data <- c(3,2,1143,1655)
+
+# fit ABC model
+res <- abc(target=obs_data, 
+           param=sim_param, 
+           sumstat = sim_data,
+           tol = 0.001,
+           transf=c("log"),
+           method="neuralnet")
+
+# plot results -> two equal merged populations?
+# todo, force plot without enter-key
+plot(res, param=sim_param)
+
+# save estimated number of pubs and agents
+estimated_params <- res$adj.values
+estimated_params
+
+# curve y(x) for parameters a,b,c,d 
+y.plot <- function(x,a,b,c,d){d + (a-d)/(1+x*(x/c)^b)}
+# length of x axis
+x <- seq(1,1000)
+
+# plot all generated y curves (with params a,b,c,d) and given curve
+plot(x, y.plot(x,obs_data[1],obs_data[2],obs_data[3],obs_data[4]), type = "l", col = "red", lwd = 3)
+for(i in 1:nrow(sim_data)){
+  lines(x, y.plot(x,sim_data[i,1],sim_data[i,2],sim_data[i,3],sim_data[i,4]), type = "l", lwd = 0.1)
+}
+lines(x, y.plot(x,obs_data[1],obs_data[2],obs_data[3],obs_data[4]), type = "l", col = "red", lwd = 3)
+
+# plot given curve and guesses from ABC
+plot(x, y.plot(x,obs_data[1],obs_data[2],obs_data[3],obs_data[4]), type = "l", col = "red", lwd = 3)
+for (i in 1:nrow(estimated_params)) {
+  n_agents <- estimated_params[i,1]
+  n_pubs <- estimated_params[i,2]
+  
+  print(paste("Guess",i,": ",round(n_agents),"Agents and",round(n_pubs) ,"Pubs"))
+  
+  corresponding_parameters <- sim_data[sim_param$param.agents==round(n_agents) & sim_param$param.pubs == round(n_pubs),]
+  a <- corresponding_parameters$out.a
+  b <- corresponding_parameters$out.b
+  c <- corresponding_parameters$out.c
+  d <- corresponding_parameters$out.d
+  
+  lines(x, y.plot(x,a,b,c,d), type = "l", col = i+10)
+}
+```
+
+
+
+
